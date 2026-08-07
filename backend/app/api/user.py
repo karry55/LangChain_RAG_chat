@@ -4,15 +4,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 
 from app.core.database import get_db
-from app.core.dependencies import get_admin_user
+from app.core.dependencies import get_admin_user, get_current_user
 from app.models.user import User
 
 router = APIRouter()
 
 
 @router.get("/me")
-async def get_my_info(current_user: User = Depends(get_admin_user)):
-    """获取当前用户信息（已在 auth/me 中实现，此处兼容）"""
+async def get_my_info(current_user: User = Depends(get_current_user)):
+    """获取当前用户信息"""
     return {
         "id": current_user.id,
         "username": current_user.username,
@@ -78,6 +78,17 @@ async def delete_user(
     if user.role == "admin":
         return {"message": "不能删除管理员账户"}
 
+    # 级联清理：删除该用户的所有文档（文件 + 向量）
+    from app.models.knowledge import KnowledgeDocument
+    from app.services.document_service import delete_document
+
+    result = await db.execute(
+        select(KnowledgeDocument).where(KnowledgeDocument.uploaded_by == user_id)
+    )
+    docs = result.scalars().all()
+    for doc in docs:
+        await delete_document(doc.id, db)
+
     await db.delete(user)
     await db.commit()
-    return {"message": f"用户 '{user.username}' 已删除"}
+    return {"message": f"用户 '{user.username}' 及其 {len(docs)} 个文档已删除"}

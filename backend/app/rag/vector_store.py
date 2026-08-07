@@ -1,8 +1,10 @@
-"""向量数据库管理 - Milvus Lite / ChromaDB"""
+"""向量数据库管理 - ChromaDB / Milvus Lite"""
 from typing import List, Optional
 from langchain_core.documents import Document
 from langchain_core.vectorstores import VectorStore
 from loguru import logger
+
+logger = logger.bind(module="vector_store")
 
 from app.core.config import get_settings
 
@@ -57,11 +59,17 @@ def add_documents(documents: List[Document]) -> List[str]:
 
 
 def delete_documents_by_filter(filter_dict: dict):
-    """根据过滤条件删除向量"""
+    """根据过滤条件删除向量（兼容 ChromaDB 和 Milvus）"""
     store = get_vector_store()
-    # ChromaDB 支持 filter 删除
+    # ChromaDB: 访问内部 _collection
     if hasattr(store, "_collection"):
         store._collection.delete(filter=filter_dict)
+    elif hasattr(store, "col"):
+        # Milvus: 使用 expr 删除
+        expr_parts = [f'{k} == "{v}"' for k, v in filter_dict.items()]
+        store.col.delete(expr=" && ".join(expr_parts))
+    else:
+        logger.warning(f"无法删除向量：不支持的后端 {type(store).__name__}")
 
 
 def similarity_search_with_score(

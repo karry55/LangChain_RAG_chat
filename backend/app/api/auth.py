@@ -87,12 +87,18 @@ async def change_password(
 
 @router.get("/me")
 async def get_me(current_user: User = Depends(get_current_user)):
-    """获取当前登录用户信息"""
-    return UserInfo(
-        id=current_user.id,
-        username=current_user.username,
-        email=current_user.email,
-        role=current_user.role,
-        is_active=current_user.is_active,
-        created_at=str(current_user.created_at),
-    )
+    """获取当前登录用户信息（缓存 60s）"""
+    from app.core.cache import user_cache, cached
+
+    @cached(user_cache, key_func=lambda uid: f"user_info:{uid}")
+    async def _build_info(uid: str):
+        return {
+            "id": current_user.id,
+            "username": current_user.username,
+            "email": current_user.email,
+            "role": current_user.role,
+            "is_active": current_user.is_active,
+            "created_at": str(current_user.created_at),
+        }
+
+    return await _build_info(current_user.id)

@@ -21,7 +21,30 @@
       "Bash(sleep *)",
       "Bash(export *)",
       "Bash(echo *)",
-      "Bash(python3 -c \"import json; json.load\\(open\\(r'c:\\\\[1] 工作与学业\\\\langchainRAG项目\\\\.claude\\\\settings.json', encoding='utf-8'\\)\\); print\\('JSON valid'\\)\")"
+      "Bash(git *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash(git commit*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"${CLAUDE_PROJECT_DIR}\" && python -m pytest backend/tests/ -q --tb=no 2>&1 || echo '⚠️ 后端测试未通过，建议先修复再提交'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '💡 提示：后端和前端可能仍在运行。如需停止：taskkill //F //IM python.exe //IM node.exe'"
+          }
+        ]
+      }
     ]
   }
 }

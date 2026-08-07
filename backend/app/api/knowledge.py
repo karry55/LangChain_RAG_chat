@@ -163,5 +163,12 @@ async def knowledge_stats(
     admin: User = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """获取知识库统计数据"""
-    return await get_knowledge_stats(db)
+    """获取知识库统计数据（缓存 30s）"""
+    from app.core.cache import stats_cache
+    cache_key = "knowledge_stats"
+    cached_val = stats_cache.get(cache_key)
+    if cached_val is not None:
+        return cached_val
+    result = await get_knowledge_stats(db)
+    stats_cache.set(cache_key, result)
+    return result

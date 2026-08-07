@@ -48,7 +48,7 @@ async def chat_stream(
     # 1. 获取或创建会话
     conv = await get_or_create_conversation(
         db, user_id, conversation_id,
-        title=question[:30] if not conversation_id else None,
+        title=question[:30] if not conversation_id else "新对话",
     )
 
     # 2. 保存用户消息
@@ -59,10 +59,9 @@ async def chat_stream(
     )
     db.add(user_msg)
 
-    # 更新会话信息
+    # 更新会话标题（仅首次）
     if conv.message_count == 0:
         conv.title = question[:30] + ("..." if len(question) > 30 else "")
-    conv.message_count = (conv.message_count or 0) + 1
     await db.flush()
 
     # 3. 获取历史消息
@@ -93,8 +92,14 @@ async def chat_stream(
         token_count=len(full_answer),
     )
     db.add(assistant_msg)
-    conv.message_count = (conv.message_count or 0) + 1
     await db.flush()
+    # 原子更新消息计数（避免并发丢失更新）
+    from sqlalchemy import update as sql_update
+    await db.execute(
+        sql_update(Conversation)
+        .where(Conversation.id == conv.id)
+        .values(message_count=Conversation.message_count + 2)
+    )
 
     logger.info(f"会话 {conv.id}: 问答完成, 回答长度 {len(full_answer)}")
 
@@ -211,9 +216,15 @@ async def set_feedback(
     db: AsyncSession,
     message_id: str,
     feedback: str,
+    user_id: str,
 ):
-    """设置消息反馈 (like/dislike)"""
-    result = await db.execute(select(Message).where(Message.id == message_id))
+    """设置消息反馈 (like/dislike)，校验消息归属"""
+    from app.models.conversation import Conversation as ConvModel
+    result = await db.execute(
+        select(Message)
+        .join(ConvModel, Message.conversation_id == ConvModel.id)
+        .where(Message.id == message_id, ConvModel.user_id == user_id)
+    )
     msg = result.scalar_one_or_none()
     if msg:
         msg.feedback = feedback

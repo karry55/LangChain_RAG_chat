@@ -1,11 +1,11 @@
-"""高级检索器: 向量检索 + MMR 去重 + 重排序"""
+"""高级检索器: 向量检索 + MMR 去重"""
 from typing import List
 from langchain_core.documents import Document
 from loguru import logger
 
 from app.core.config import get_settings
-from app.rag.embedder import embed_query
-from app.rag.vector_store import similarity_search_with_score, get_vector_store
+from app.rag.embedder import embed_texts
+from app.rag.vector_store import similarity_search_with_score
 
 settings = get_settings()
 
@@ -33,10 +33,9 @@ class AdvancedRetriever:
             logger.warning("未检索到任何结果")
             return []
 
-        # Step 2: MMR 去重 - 从 fetch_k 中选 final_k 个多样性最高的
+        # Step 2: MMR 去重
         logger.info(f"MMR 去重: {len(results)} → {self.final_k} (λ={self.lambda_mult})")
         selected = self._mmr_select(
-            query=query,
             candidates=results,
             k=self.final_k,
             lambda_mult=self.lambda_mult,
@@ -47,7 +46,6 @@ class AdvancedRetriever:
 
     def _mmr_select(
         self,
-        query: str,
         candidates: List[tuple],
         k: int,
         lambda_mult: float = 0.7,
@@ -57,17 +55,19 @@ class AdvancedRetriever:
         在相关性和多样性之间平衡:
         - lambda_mult 趋近 1: 更注重相关性
         - lambda_mult 趋近 0: 更注重多样性
+
+        优化: 一次性批嵌入所有候选文本，避免 O(k*n) 次 API 调用
         """
         n = len(candidates)
         if n <= k:
             return candidates
 
-        # 获取候选文本的向量（从向量数据库）
+        # 批嵌入所有候选文本（一次 API 调用，含缓存）
         try:
-            store = get_vector_store()
-            query_vec = embed_query(query)
-        except Exception:
-            # 回退: 按分数排序直接取 top-k
+            texts = [doc.page_content for doc, _ in candidates]
+            candidate_vecs = embed_texts(texts)
+        except Exception as e:
+            logger.warning(f"批嵌入失败，回退到按分数排序: {e}")
             candidates.sort(key=lambda x: x[1], reverse=True)
             return candidates[:k]
 
@@ -88,17 +88,13 @@ class AdvancedRetriever:
             best_idx = remaining[0]
 
             for i in remaining:
-                # 相关性得分
+                # 相关性得分（来自向量检索）
                 relevance = candidates[i][1]
-                # 多样性惩罚 (已选中的最大相似度)
+                # 多样性惩罚：与已选中文档的最大相似度
                 max_sim = max(
-                    self._cosine_similarity(
-                        embed_query(candidates[i][0].page_content),
-                        embed_query(candidates[s][0].page_content),
-                    )
+                    self._cosine_similarity(candidate_vecs[i], candidate_vecs[s])
                     for s in selected
                 )
-                # MMR 得分
                 mmr_score = lambda_mult * relevance - (1 - lambda_mult) * max_sim
 
                 if mmr_score > best_score:

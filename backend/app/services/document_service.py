@@ -62,7 +62,12 @@ async def process_document(doc_id: str, db: AsyncSession):
         logger.info(f"[{doc.title}] 开始分块...")
         chunks = split_documents(raw_docs)
 
-        # 3. 存储到向量数据库 (Chroma 内部使用 embedding_function 统一嵌入)
+        # 3. 为每个 chunk 注入 document_id 元数据（用于后续删除和过滤）
+        for chunk in chunks:
+            chunk.metadata["document_id"] = doc_id
+            chunk.metadata["doc_title"] = doc.title
+
+        # 4. 存储到向量数据库 (Chroma 内部使用 embedding_function 统一嵌入)
         logger.info(f"[{doc.title}] 存储向量到 {settings.vector_store} (含嵌入)...")
         vector_ids = add_documents(chunks)
 

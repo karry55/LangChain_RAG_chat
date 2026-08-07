@@ -1,0 +1,66 @@
+import { create } from 'zustand';
+
+interface User {
+  id: string;
+  username: string;
+  email: string;
+  role: string;
+}
+
+interface AuthState {
+  token: string | null;
+  user: User | null;
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+  login: (token: string, user: User) => void;
+  logout: () => void;
+  loadFromStorage: () => void;
+}
+
+export const useAuthStore = create<AuthState>((set) => ({
+  token: null,
+  user: null,
+  isAuthenticated: false,
+  isAdmin: false,
+
+  login: (token: string, user: User) => {
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(user));
+    set({
+      token,
+      user,
+      isAuthenticated: true,
+      isAdmin: user.role === 'admin',
+    });
+  },
+
+  logout: () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    set({
+      token: null,
+      user: null,
+      isAuthenticated: false,
+      isAdmin: false,
+    });
+  },
+
+  loadFromStorage: () => {
+    const token = localStorage.getItem('token');
+    const userStr = localStorage.getItem('user');
+    if (token && userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        set({
+          token,
+          user,
+          isAuthenticated: true,
+          isAdmin: user.role === 'admin',
+        });
+      } catch {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
+    }
+  },
+}));

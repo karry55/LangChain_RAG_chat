@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m *)",
+      "Bash(pip install *)",
+      "Bash(curl *)",
+      "Bash(taskkill *)",
+      "Bash(powershell *)",
+      "Bash(cd *backend* && *)",
+      "Bash(cd *frontend* && *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(node *)",
+      "Bash(start http://localhost:*)",
+      "Bash(mkdir *)",
+      "Bash(rm *)",
+      "Bash(cp *)",
+      "Bash(cat *)",
+      "Bash(find *)",
+      "Bash(grep *)",
+      "Bash(sleep *)",
+      "Bash(export *)",
+      "Bash(echo *)",
+      "Bash(python3 -c \"import json; json.load\\(open\\(r'c:\\\\[1] 工作与学业\\\\langchainRAG项目\\\\.claude\\\\settings.json', encoding='utf-8'\\)\\); print\\('JSON valid'\\)\")"
+    ]
+  }
+}

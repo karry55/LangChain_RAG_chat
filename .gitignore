@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Environment
+.env
+backend/.env
+
+# Database
+*.db
+*.sqlite3
+
+# Vector store data
+backend/data/chroma/
+backend/data/cache/
+backend/data/uploads/
+
+# Build output
+frontend/dist/
+*.tsbuildinfo
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python
+*.egg
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Logs
+*.log

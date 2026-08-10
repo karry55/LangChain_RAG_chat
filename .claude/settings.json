@@ -21,7 +21,16 @@
       "Bash(sleep *)",
       "Bash(export *)",
       "Bash(echo *)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Bash(python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4 --log-level warning)",
+      "Bash(curl -s http://localhost:8000/api/health)",
+      "Bash(python -c \"import pydantic_settings, jose, bcrypt; print\\('Core OK'\\)\")",
+      "Bash(python -c \"import dashscope; print\\('DashScope OK'\\)\")",
+      "Bash(python -c \"import langchain_community; print\\('LangChain OK'\\)\")",
+      "Bash(python -c \"import chromadb; print\\('ChromaDB OK'\\)\")",
+      "Bash(python -m uvicorn app.main:app --host 0.0.0.0 --port 8000)",
+      "Bash(python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload)",
+      "Bash(python -m pytest tests/ -v --tb=short)"
     ]
   },
   "hooks": {
